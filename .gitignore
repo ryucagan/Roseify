@@ -1,0 +1,8 @@
+# secrets
+.env
+
+# downloaded matches and generated stats (large, rebuilt locally)
+cache/
+data/
+
+node_modules/
