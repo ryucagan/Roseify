@@ -1,0 +1,15 @@
+{
+  "name": "roseify",
+  "version": "1.0.0",
+  "description": "Blitz-style stats app for Valorant and League of Legends (Riot API)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "demo": "node server/index.js --demo",
+    "crawl:lol": "node crawler/lol-builds.js",
+    "crawl:val": "node crawler/val-agents.js",
+    "rebuild:lol": "node crawler/rebuild.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}
