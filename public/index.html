@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roseify</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🌹</text></svg>">
+</head>
+<body>
+  <aside class="side">
+    <a class="brand" href="#/"><span class="logo">🌹</span> Roseify</a>
+    <nav>
+      <div class="navhead val">VALORANT</div>
+      <a href="#/val/me" data-nav="/val/me">My profile</a>
+      <a href="#/val/agents" data-nav="/val/agents">Agent stats</a>
+      <div class="navhead lol">LEAGUE OF LEGENDS</div>
+      <a href="#/lol/me" data-nav="/lol/me">My profile</a>
+      <a href="#/lol/live/me" data-nav="/lol/live">Live game</a>
+      <a href="#/lol/builds" data-nav="/lol/builds">Builds &amp; tier list</a>
+      <div class="navsep"></div>
+      <a href="#/settings" data-nav="/settings">Settings</a>
+    </nav>
+    <div class="side-foot" id="modeTag"></div>
+  </aside>
+  <div class="wrap">
+    <header class="top">
+      <form id="search" class="search" autocomplete="off">
+        <select id="sGame" aria-label="Game">
+          <option value="val">Valorant</option>
+          <option value="lol">League</option>
+        </select>
+        <input id="sId" placeholder="Search a player: Name#TAG" aria-label="Riot ID">
+        <select id="sRegion" aria-label="Region"></select>
+        <button type="submit">Search</button>
+      </form>
+    </header>
+    <div id="banner"></div>
+    <main id="main"></main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
