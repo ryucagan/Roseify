@@ -17,9 +17,20 @@ function regionFor(platform) {
 // account-v1 has no "sea" cluster
 const accountRegionFor = platform => (regionFor(platform) === 'sea' ? 'asia' : regionFor(platform));
 
-async function profile(riotId, platform) {
-  const account = await getAccountByRiotId(riotId, accountRegionFor(platform));
+// Which League server a player is on (Riot IDs are global, ranks/matches are per server).
+async function detectPlatform(puuid, fallback) {
+  try {
+    const r = await riotGet(accountRegionFor(fallback), `/riot/account/v1/region/by-game/lol/by-puuid/${puuid}`, { ttl: 3600e3 });
+    const p = String(r?.region || '').toLowerCase();
+    if (PLATFORM_REGION[p]) return p;
+  } catch {}
+  return fallback;
+}
+
+async function profile(riotId, wantedPlatform) {
+  const account = await getAccountByRiotId(riotId, accountRegionFor(wantedPlatform));
   const { puuid } = account;
+  const platform = await detectPlatform(puuid, wantedPlatform);
   const [summoner, ranks, mastery] = await Promise.all([
     riotGet(platform, `/lol/summoner/v4/summoners/by-puuid/${puuid}`, { ttl: 300e3 }),
     riotGet(platform, `/lol/league/v4/entries/by-puuid/${puuid}`, { ttl: 120e3 }).catch(() => []),
@@ -32,6 +43,15 @@ async function profile(riotId, platform) {
     ranks: ranks.map(r => ({ queue: r.queueType, tier: r.tier, rank: r.rank, lp: r.leaguePoints, wins: r.wins, losses: r.losses, hotStreak: r.hotStreak })),
     mastery: mastery.map(m => ({ championId: m.championId, level: m.championLevel, points: m.championPoints, lastPlay: m.lastPlayTime })),
   };
+}
+
+// Riot encrypts player IDs per API key. A match cached under an older key has different
+// IDs, so if the player isn't found in the cached copy, download it again with this key.
+async function getMatchFor(region, id, puuid) {
+  const path = `/lol/match/v5/matches/${id}`;
+  const m = await riotGet(region, path, { permanent: true });
+  if (puuid && !(m.metadata?.participants || []).includes(puuid)) return riotGet(region, path, { permanent: true, fresh: true });
+  return m;
 }
 
 function summarizeMatch(m) {
@@ -73,18 +93,19 @@ async function matches(puuid, platform, start = 0, count = 10, queue = '') {
   const q = queue ? `&queue=${Number(queue)}` : '';
   const ids = await riotGet(region, `/lol/match/v5/matches/by-puuid/${encodeURIComponent(puuid)}/ids?start=${Number(start)}&count=${Math.min(Number(count) || 10, 20)}${q}`, { ttl: 60e3 });
   const list = await Promise.all(ids.map(id =>
-    riotGet(region, `/lol/match/v5/matches/${id}`, { permanent: true }).then(summarizeMatch).catch(() => null)));
+    getMatchFor(region, id, puuid).then(summarizeMatch).catch(() => null)));
   return { matches: list.filter(Boolean), hasMore: ids.length >= Math.min(Number(count) || 10, 20) };
 }
 
 // Live game (spectator-v5) for a Riot ID. Enriches each player with their ranked info.
-async function liveGame(riotId, platform) {
-  const account = await getAccountByRiotId(riotId, accountRegionFor(platform));
+async function liveGame(riotId, wantedPlatform) {
+  const account = await getAccountByRiotId(riotId, accountRegionFor(wantedPlatform));
+  const platform = await detectPlatform(account.puuid, wantedPlatform);
   let g;
   try {
     g = await riotGet(platform, `/lol/spectator/v5/active-games/by-summoner/${account.puuid}`, { ttl: 20e3 });
   } catch (e) {
-    if (e.status === 404) return { inGame: false, account: { puuid: account.puuid, gameName: account.gameName, tagLine: account.tagLine } };
+    if (e.status === 404) return { inGame: false, platform, account: { puuid: account.puuid, gameName: account.gameName, tagLine: account.tagLine } };
     throw e;
   }
   return summarizeLive(g, account, platform);
@@ -110,7 +131,7 @@ async function summarizeLive(g, account, platform, fns = {}) {
     };
   }));
   return {
-    inGame: true,
+    inGame: true, platform,
     account: { puuid: account.puuid, gameName: account.gameName, tagLine: account.tagLine },
     gameId: g.gameId, queue: g.gameQueueConfigId, mode: g.gameMode, map: g.mapId,
     start: g.gameStartTime || 0, length: g.gameLength || 0, fetchedAt: Date.now(),

@@ -114,6 +114,7 @@ async function route() {
 const alive = t => t === navToken;
 const errBox = e => `<div class="err"><b>Something went wrong.</b><br>${esc(e.message)}</div>`;
 const go = h => { location.hash = h; };
+const splitId = id => { const s = String(id || ''); const i = s.lastIndexOf('#'); return i < 0 ? [s, ''] : [s.slice(0, i), s.slice(i + 1)]; };
 const playerLink = (game, name, tag, region) => `#/${game}/player/${enc(name + '#' + tag)}${region ? '?r=' + enc(region) : ''}`;
 
 // ===================== search bar =====================
@@ -124,11 +125,21 @@ function fillRegions() {
   $('#sRegion').innerHTML = list.map(r => `<option value="${r}" ${r === def ? 'selected' : ''}>${r.toUpperCase()}</option>`).join('');
 }
 $('#sGame').addEventListener('change', fillRegions);
+// Name + tag fields. Pasting or typing "Name#TAG" into the name box splits it automatically.
+function wireRiotId(nameEl, tagEl) {
+  nameEl.addEventListener('input', () => {
+    const v = nameEl.value, i = v.lastIndexOf('#');
+    if (i >= 0) { nameEl.value = v.slice(0, i).trim(); const t = v.slice(i + 1).trim(); if (t) tagEl.value = t; tagEl.focus(); }
+  });
+  tagEl.addEventListener('input', () => { tagEl.value = tagEl.value.replace(/^#/, ''); });
+  tagEl.addEventListener('keydown', e => { if (e.key === 'Backspace' && !tagEl.value) nameEl.focus(); });
+}
+wireRiotId($('#sId'), $('#sTag'));
 $('#search').addEventListener('submit', e => {
   e.preventDefault();
-  const id = $('#sId').value.trim();
-  if (!id.includes('#')) { $('#sId').focus(); $('#sId').placeholder = 'Include the tag, e.g. Name#TR1'; $('#sId').value = ''; return; }
-  const [name, tag] = [id.slice(0, id.lastIndexOf('#')), id.slice(id.lastIndexOf('#') + 1)];
+  const name = $('#sId').value.trim(), tag = $('#sTag').value.trim().replace(/^#/, '');
+  if (!name) { $('#sId').focus(); return; }
+  if (!tag) { $('#sTag').focus(); $('#sTag').classList.add('bad'); setTimeout(() => $('#sTag').classList.remove('bad'), 1500); return; }
   go(playerLink($('#sGame').value, name, tag, $('#sRegion').value));
 });
 
@@ -158,17 +169,28 @@ function settingsPage(focus) {
     <form class="card form" id="setf">
       <h2>Your accounts</h2>
       <label>Valorant Riot ID</label>
-      <div class="pair"><input name="valId" placeholder="Name#TAG" value="${esc(st.valId)}"><select name="valShard">${opts(S.cfg.valShards, st.valShard)}</select></div>
+      <div class="pair"><div class="rid"><input name="valName" placeholder="Player name" value="${esc(splitId(st.valId)[0])}"><span class="hash">#</span><input name="valTag" placeholder="TAG" maxlength="5" value="${esc(splitId(st.valId)[1])}"></div><select name="valShard">${opts(S.cfg.valShards, st.valShard)}</select></div>
       <label>League Riot ID</label>
-      <div class="pair"><input name="lolId" placeholder="Name#TAG" value="${esc(st.lolId)}"><select name="lolPlatform">${opts(S.cfg.lolPlatforms, st.lolPlatform)}</select></div>
+      <div class="pair"><div class="rid"><input name="lolName" placeholder="Player name" value="${esc(splitId(st.lolId)[0])}"><span class="hash">#</span><input name="lolTag" placeholder="TAG" maxlength="5" value="${esc(splitId(st.lolId)[1])}"></div><select name="lolPlatform">${opts(S.cfg.lolPlatforms, st.lolPlatform)}</select></div>
       <div class="row"><button type="submit">Save</button><span id="saved" class="g small"></span></div>
     </form>`;
   const f = $('#setf');
-  if (focus) f.elements[focus]?.focus();
+  wireRiotId(f.elements.valName, f.elements.valTag);
+  wireRiotId(f.elements.lolName, f.elements.lolTag);
+  if (focus) f.elements[focus === 'valId' ? 'valName' : 'lolName']?.focus();
   f.addEventListener('submit', e => {
     e.preventDefault();
-    const d = Object.fromEntries(new FormData(f));
-    for (const k of ['valId', 'lolId']) if (d[k] && !d[k].includes('#')) { f.elements[k].focus(); f.elements[k].style.borderColor = 'var(--loss)'; return; }
+    const raw = Object.fromEntries(new FormData(f));
+    for (const g of ['val', 'lol']) {
+      const n = raw[g + 'Name'].trim(), t = raw[g + 'Tag'].trim().replace(/^#/, '');
+      if (n && !t) { f.elements[g + 'Tag'].classList.add('bad'); f.elements[g + 'Tag'].focus(); return; }
+      if (t && !n) { f.elements[g + 'Name'].classList.add('bad'); f.elements[g + 'Name'].focus(); return; }
+    }
+    const d = {
+      valId: raw.valName.trim() ? `${raw.valName.trim()}#${raw.valTag.trim().replace(/^#/, '')}` : '',
+      lolId: raw.lolName.trim() ? `${raw.lolName.trim()}#${raw.lolTag.trim().replace(/^#/, '')}` : '',
+      valShard: raw.valShard, lolPlatform: raw.lolPlatform,
+    };
     store.set('gglens.settings', d);
     $('#saved').textContent = 'Saved';
     fillRegions();
@@ -572,6 +594,7 @@ async function lolLive(riotId, platform, isMe) {
   async function load() {
     const g = await api(`/api/lol/live?riotId=${enc(riotId)}&platform=${enc(platform)}`);
     if (!alive(token)) return stop();
+    if (g.platform) platform = g.platform;
     render(g);
   }
   function render(g) {
@@ -648,6 +671,14 @@ const LANES = [['', 'All lanes'], ['TOP', 'Top'], ['JUNGLE', 'Jungle'], ['MIDDLE
 const LANE_ICON = { '': 'fill', TOP: 'top', JUNGLE: 'jungle', MIDDLE: 'middle', BOTTOM: 'bottom', UTILITY: 'utility' };
 const laneIcon = (k, n) => img(`https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-${LANE_ICON[k]}.png`, n, 'laneic');
 
+// Sample-size reminder (top right of builds pages). Margin = 95% range of a win rate from n games.
+function sampleBadge(n, what, shownLabel) {
+  const margin = n ? Math.round(98 / Math.sqrt(n)) : 99;
+  const [cls, label] = n < 100 ? ['vs', 'Very small sample'] : n < 500 ? ['sm', 'Small sample'] : n < 2000 ? ['md', 'Growing sample'] : ['ok', 'Solid sample'];
+  return `<span class="sample ${cls}" tabindex="0">📊 ${label} · ${shownLabel || `${num(n)} ${n === 1 ? 'game' : 'games'}`}
+    <span class="sample-tip"><b>${num(n)} ${what}.</b><br>Win rates can be off by about ±${margin}% just by chance at this size. Items and runes that most players pick are reliable sooner than win rates. Roseify is still collecting matches, so these numbers will get more accurate over time.</span></span>`;
+}
+
 const FLEX_NOTE = `<div class="note">⚠️ <b>Take Ranked Flex stats with a grain of salt.</b> At higher ranks, players often queue in Flex with their regular teammates, so win rates can reflect coordinated premade groups more than the champions themselves. Plan around that before copying a pick or build.</div>`;
 
 function assignTiers(champs, matches) {
@@ -677,7 +708,7 @@ async function lolBuilds() {
   main.innerHTML = `
     <div class="row sp-between wrap-row" style="margin-bottom:14px">
       <div><h1>Builds &amp; tier list</h1><div class="mute">Patch ${esc(idx.patch || '?')}${idx.platform ? ' · ' + esc(idx.platform.toUpperCase()) : ''}${idx.demo ? ' · <span class="gold">demo data</span>' : ''} · pick a mode, then a champion for its build</div></div>
-      <input id="bSearch" placeholder="Search champion…" style="width:220px">
+      <div class="row"><span id="bSample"></span><input id="bSearch" placeholder="Search champion…" style="width:220px"></div>
     </div>
     <div class="tabs" id="bq">${idx.queues.map(q => `<div class="tab" data-q="${q.id}">${esc(q.name)} <span class="dim small">${num(q.matches)}</span></div>`).join('')}</div>
     <div id="bNote"></div>
@@ -688,6 +719,8 @@ async function lolBuilds() {
     $$('#bq .tab').forEach(t => t.classList.toggle('on', +t.dataset.q === st.q));
     const Q = idx.queues.find(q => q.id === st.q);
     $('#bNote').innerHTML = st.q === 440 ? FLEX_NOTE : '';
+    const avgGames = Math.round(Q.champions.reduce((t, c) => t + c.games, 0) / Math.max(1, Q.champions.length));
+    $('#bSample').innerHTML = sampleBadge(avgGames, `games per champion on average, from ${num(Q.matches)} matches in this mode`, `~${num(avgGames)} games per champion`);
     const hasLanes = Q.champions.some(c => c.roles && Object.keys(c.roles).length);
     $('#bLanes').style.display = hasLanes ? '' : 'none';
     const role = hasLanes ? st.role : '';
@@ -831,6 +864,7 @@ async function lolBuild(champId, queue, wantRole) {
   const wrBox = o => `<div class="wr"><b class="${wrClass(o.wins / o.games)}">${pct(o.wins / o.games)}</b><span class="dim">${num(o.games)} games</span></div>`;
   const stat = (k, v, s = '') => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
   main.innerHTML = `
+    <div class="samplewrap">${sampleBadge(b.games, `games of ${esc(c?.name || 'this champion')} in this mode`)}</div>
     <div class="champhead">
       ${L.champ(champId, 'ic lg')}
       <div><h1>${esc(c?.name || 'Champion')} <span class="mute" style="font-weight:500">build</span></h1>
@@ -919,7 +953,10 @@ async function lolBuild(champId, queue, wantRole) {
   try {
     [S.cfg, S.lol, S.val] = await Promise.all([api('/api/config'), api('/api/lol/static'), api('/api/val/static')]);
   } catch (e) { main.innerHTML = errBox(new Error('Could not reach the Roseify server. Is it running? ' + e.message)); return; }
-  if (S.cfg.demo) $('#banner').innerHTML = '<div class="bn"><b>Demo mode.</b> You are seeing generated sample data. Put your Riot API key in <code>.env</code> and restart to see real players.</div>';
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  if (S.cfg.demo) $('#banner').innerHTML = local
+    ? '<div class="bn"><b>Demo mode.</b> You are seeing generated sample data. Put your Riot API key in <code>.env</code> and restart to see real players.</div>'
+    : '<div class="bn"><b>Demo mode.</b> This preview uses generated sample data, so every player and match you see is made up. Live data from the Riot Games API will be enabled once Roseify is approved. <a href="/about.html">About Roseify</a></div>';
   $('#modeTag').textContent = S.cfg.demo ? 'Demo mode' : `Live · LoL ${S.cfg.lolPlatform.toUpperCase()} · VAL ${S.cfg.valShard.toUpperCase()}`;
   fillRegions();
   window.addEventListener('hashchange', route);

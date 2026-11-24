@@ -21,7 +21,7 @@
       <div class="navsep"></div>
       <a href="#/settings" data-nav="/settings">Settings</a>
     </nav>
-    <div class="side-foot" id="modeTag"></div>
+    <div class="side-foot"><div class="sidelinks"><a href="/about.html">About</a><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a></div><div id="modeTag"></div></div>
   </aside>
   <div class="wrap">
     <header class="top">
@@ -30,7 +30,11 @@
           <option value="val">Valorant</option>
           <option value="lol">League</option>
         </select>
-        <input id="sId" placeholder="Search a player: Name#TAG" aria-label="Riot ID">
+        <div class="rid">
+          <input id="sId" placeholder="Player name" aria-label="Riot name">
+          <span class="hash">#</span>
+          <input id="sTag" placeholder="TAG" aria-label="Tag" maxlength="5">
+        </div>
         <select id="sRegion" aria-label="Region"></select>
         <button type="submit">Search</button>
       </form>

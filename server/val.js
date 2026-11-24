@@ -60,7 +60,9 @@ async function matches(puuid, shard, start = 0, count = 10, queue = '') {
   if (queue) hist = hist.filter(h => h.queueId === queue);
   const slice = hist.slice(Number(start), Number(start) + Math.min(Number(count) || 10, 20));
   const out = await Promise.all(slice.map(h =>
-    riotGet(shard, `/val/match/v1/matches/${h.matchId}`, { permanent: true }).then(summarizeMatch).catch(() => null)));
+    riotGet(shard, `/val/match/v1/matches/${h.matchId}`, { permanent: true })
+      .then(m => (m.players || []).some(p => p.puuid === puuid) ? m : riotGet(shard, `/val/match/v1/matches/${h.matchId}`, { permanent: true, fresh: true }))
+      .then(summarizeMatch).catch(() => null)));
   return { matches: out.filter(Boolean), hasMore: Number(start) + slice.length < hist.length };
 }
 

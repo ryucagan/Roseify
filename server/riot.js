@@ -99,9 +99,9 @@ const inflight = new Map();
 async function riotGet(host, p, opt = {}) {
   if (!cfg.apiKey) throw new RiotError(401, explain(401, '', p));
   const url = `https://${host}.api.riotgames.com${p}`;
-  const cached = memGet(url);
+  const cached = opt.fresh ? undefined : memGet(url);
   if (cached !== undefined) return cached;
-  if (opt.permanent) {
+  if (opt.permanent && !opt.fresh) {
     const d = diskGet(url);
     if (d !== undefined) { memSet(url, d, 3600e3); return d; }
   }

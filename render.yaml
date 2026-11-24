@@ -1,0 +1,13 @@
+# Render deployment (https://render.com): New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: roseify
+    runtime: node
+    plan: free
+    buildCommand: echo "no build step"
+    startCommand: npm start
+    envVars:
+      - key: DEMO
+        value: "1"
+      # When a production key is approved: add RIOT_API_KEY in the Render dashboard
+      # (never in this file) and set DEMO to 0.

@@ -245,3 +245,44 @@ button.tiny { padding: 4px 8px; font-size: 12px; font-weight: 500; }
 .rrow { display: flex; gap: 8px; justify-content: center; }
 .rshards .rrow { gap: 12px; }
 .rc { flex: 0 0 auto; }
+/* Riot ID: name + tag */
+.rid { display: flex; align-items: stretch; flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.rid:focus-within { border-color: #3a4560; }
+.rid input { border: 0; background: none; border-radius: 0; min-width: 0; }
+.rid input:first-child { flex: 1; }
+.rid input:last-child { width: 80px; flex: 0 0 80px; border-left: 1px solid var(--line); text-transform: none; }
+.rid .hash { display: flex; align-items: center; padding: 0 0 0 10px; color: var(--dim); font-weight: 700; }
+.rid input.bad { box-shadow: inset 0 0 0 1px var(--loss); border-radius: 0 8px 8px 0; }
+.form .pair .rid input { flex: initial; }
+.form .pair .rid input:first-child { flex: 1; }
+/* # sits inside the tag box, right before the tag */
+.rid .hash { border-left: 1px solid var(--line); padding: 0 1px 0 12px; }
+.rid input:last-child { border-left: 0; padding-left: 2px; width: 74px; flex: 0 0 74px; }
+/* footer links + legal pages */
+.sidelinks { display: flex; gap: 10px; margin-bottom: 6px; }
+.sidelinks a { color: var(--mute); }
+.sidelinks a:hover { color: var(--text); }
+#banner .bn a { color: #f5d77e; text-decoration: underline; }
+body.docpage { display: block; }
+.doc { max-width: 780px; margin: 0 auto; padding: 32px 24px 60px; line-height: 1.65; }
+.doc .brand { padding: 0 0 10px; }
+.docnav { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 28px; padding-bottom: 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.docnav a { color: var(--mute); } .docnav a:hover { color: var(--text); }
+.doc h1 { font-size: 30px; margin-bottom: 10px; }
+.doc h2 { font-size: 18px; margin: 28px 0 8px; }
+.doc p, .doc li { color: #c9d0dc; }
+.doc a { color: #ff8a93; } .doc a:hover { text-decoration: underline; }
+.doc ul { padding-left: 20px; }
+.doc .legal { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+.doc a.brand { color: var(--text); text-decoration: none; }
+.doc .docnav a { color: var(--mute); text-decoration: none; }
+.doc .docnav a:hover { color: var(--text); }
+/* sample-size reminder */
+.samplewrap { display: flex; justify-content: flex-end; margin: -6px 0 4px; }
+.sample { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 99px; font-size: 12px; font-weight: 600; border: 1px solid; cursor: help; white-space: nowrap; }
+.sample.vs { color: #ffb3b9; border-color: rgba(239,77,90,.45); background: rgba(239,77,90,.1); }
+.sample.sm { color: #f5d77e; border-color: rgba(245,196,81,.4); background: rgba(245,196,81,.08); }
+.sample.md { color: #9cc4ff; border-color: rgba(61,139,253,.4); background: rgba(61,139,253,.08); }
+.sample.ok { color: #7fe0b3; border-color: rgba(63,207,142,.4); background: rgba(63,207,142,.08); }
+.sample-tip { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: 300px; white-space: normal; padding: 10px 12px; border-radius: 8px; background: #1b2232; border: 1px solid var(--line); color: var(--text); font-weight: 400; line-height: 1.5; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.sample:hover .sample-tip, .sample:focus .sample-tip { display: block; }
